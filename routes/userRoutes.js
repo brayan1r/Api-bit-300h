@@ -37,6 +37,37 @@ router.post('/', (req, res) => {
     res.status(201).json(nuevoUsuario);
 
 });
+
+router.put('/:nombre', (req, res) => {
+  const actual = req.params.nombre.toLowerCase();
+  const idx = usuarios.findIndex(u => u.nombre.toLowerCase() === actual);
+
+  if (idx === -1) {
+    return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+  }
+
+  const { nombre, edad } = req.body;
+
+  // Validaciones simples
+  if (edad !== undefined && (typeof edad !== 'number' || edad <= 0)) {
+    return res.status(400).json({ mensaje: 'Edad inválida: debe ser número > 0' });
+  }
+
+  // Si quieren cambiar el nombre, validar duplicado
+  if (nombre && nombre.toLowerCase() !== actual) {
+    const duplicado = usuarios.some(u => u.nombre.toLowerCase() === nombre.toLowerCase());
+    if (duplicado) {
+      return res.status(409).json({ mensaje: 'Ya existe un usuario con ese nombre' });
+    }
+    usuarios[idx].nombre = nombre;
+  }
+
+  if (edad !== undefined) {
+    usuarios[idx].edad = edad;
+  }
+
+  return res.json(usuarios[idx]);
+});
  
 router.delete('/:nombre', (req, res) => {
     const nombre = req.params.nombre.toLowerCase();

@@ -2,6 +2,7 @@
 // const express = require('express');
 import express from 'express';
 import userRoutes from './routes/userRoutes.js'
+import productRoutes from './routes/productRoutes.js';
 
 //2. Crear una instancia de express
 const app = express();
@@ -12,7 +13,8 @@ const PORT = 3000;
 //4. Definir el middleware para parsear el body de las peticiones
 app.use(express.json());
 
-app.use('/user', userRoutes)
+app.use('/user', userRoutes);
+app.use('/product', productRoutes);
 
 //6. Iniciar el servidor
 app.listen(PORT, () => {
