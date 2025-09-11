@@ -8,7 +8,7 @@ const productSchema = new Schema({
 }, { timestamps: true });
 
 
-const Product = mongoose.model('Product', productSchema, 'productos');
+const Product = mongoose.model('Product', productSchema, 'products');
 // (nombreDelModelo, esquema, nombreDeColeccionOpcional)
 
 export default Product;
