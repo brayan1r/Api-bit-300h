@@ -17,6 +17,7 @@ app.use(express.json());
 // rate limit fino
 app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }));
 
+//Rutas de trabajo de mi app
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
