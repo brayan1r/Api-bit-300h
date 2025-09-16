@@ -1,24 +1,26 @@
-import express from 'express';
-import User from '../models/User.js';
-import {  
+import { Router } from 'express';
+import {
+  listarUsuarios,
+  miPerfil,
+  actualizarMiPerfil,
   getUsuarioPorNombre,
-  crearUsuario,
-  actualizarUsuario,
-  eliminarUsuario, 
+  adminActualizarUsuario,
+  adminEliminarUsuario
 } from '../controllers/user.controller.js';
+import { requireAuth, requireRole } from '../middlewares/auth.js';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/', async (_req, res, next) => {
-  try {
-    const usuarios = await User.find().lean();
-    res.json(usuarios);
-  } catch (err) { next(err); }
-});
+// Propias
+router.get('/me', requireAuth, miPerfil);
+router.patch('/me', requireAuth, actualizarMiPerfil);
 
-router.get('/:nombre', getUsuarioPorNombre);
-router.post('/', crearUsuario);
-router.put('/:nombre', actualizarUsuario);
-router.delete('/:nombre', eliminarUsuario);
+// Búsqueda por nombre (no requiere auth si lo expones públicamente)
+router.get('/by-name/:nombre', getUsuarioPorNombre);
 
-export default router;
+// Admin
+router.get('/', requireAuth, requireRole('admin', 'staff'), listarUsuarios);
+router.put('/:id', requireAuth, requireRole('admin', 'staff'), adminActualizarUsuario);
+router.delete('/:id', requireAuth, requireRole('admin', 'staff'), adminEliminarUsuario);
+
+export default router

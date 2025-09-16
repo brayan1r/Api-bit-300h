@@ -1,19 +1,22 @@
-// routes/productRoutes.js
-import { Router } from "express";
+import { Router } from 'express';
 import {
   getAllProducts,
   getProductByName,
   createProduct,
   updateProductByName,
   deleteProductByName,
-} from "../controllers/product.Controller.js";
+} from '../controllers/product.Controller.js';
+import { requireAuth, requireRole } from '../middlewares/auth.js';
 
 const router = Router();
 
-router.get("/", getAllProducts);
-router.get("/:nombre", getProductByName);
-router.post("/", createProduct);
-router.put("/:nombre", updateProductByName);
-router.delete("/:nombre", deleteProductByName);
+// públicos (si quieres)
+router.get('/', getAllProducts);
+router.get('/:nombre', getProductByName);
 
-export default router;
+// protegidos por rol
+router.post('/',      requireAuth, requireRole('admin', 'staff'), createProduct);
+router.put('/:nombre',requireAuth, requireRole('admin', 'staff'), updateProductByName);
+router.delete('/:nombre', requireAuth, requireRole('admin', 'staff'), deleteProductByName);
+
+export default router
