@@ -1,39 +1,28 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import baseSchema from './User.base.js';
 
-/** Normaliza para búsquedas: sin tildes, minúsculas y sin espacios extras */
-export function normalizeKey(str = '') {
-  return str
-    .normalize('NFD')                       // separa tildes
-    .replace(/\p{Diacritic}/gu, '')        // quita diacríticos
-    .trim()
-    .toLowerCase();
-}
+const UserBase = mongoose.model('User', baseSchema, 'users'); // colección 'users'
 
-const schema = new mongoose.Schema({
-  nombre:    { type: String, required: true, trim: true },
-  nombreKey: { type: String, index: true }, // clave de búsqueda normalizada
-  email:     { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password:  { type: String, required: true, minlength: 8 },
-  role:      { type: String, enum: ['admin', 'staff', 'user'], default: 'user' },
-  edad:      { type: Number }
-}, { timestamps: true });
-
-schema.pre('save', async function(next) {
-  // hash password si cambió
-  if (this.isModified('password')) {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  }
-  // calcula nombreKey si cambió nombre
-  if (this.isModified('nombre')) {
-    this.nombreKey = normalizeKey(this.nombre);
-  }
-  next();
+// ===== Admin extra fields =====
+const adminSchema = new mongoose.Schema({
+  permisos:   [{ type: String }],                 // ej. ['manage_users', 'manage_products']
+  adminNotes: { type: String },
 });
+export const AdminUser = UserBase.discriminator('admin', adminSchema);
 
-schema.methods.comparePassword = function(plain) {
-  return bcrypt.compare(plain, this.password);
-};
+// ===== Staff extra fields =====
+const staffSchema = new mongoose.Schema({
+  area:       { type: String, required: true },   // ej. 'ventas', 'logistica'
+  turno:      { type: String, enum: ['manana', 'tarde', 'noche'] },
+  supervisor: { type: String },
+});
+export const StaffUser = UserBase.discriminator('staff', staffSchema);
 
-export default mongoose.model('User', schema);
+// ===== Regular user extra fields =====
+const customerSchema = new mongoose.Schema({
+  telefono:   { type: String },
+  direccion:  { type: String },
+});
+export const RegularUser = UserBase.discriminator('user', customerSchema);
+
+export default UserBase;

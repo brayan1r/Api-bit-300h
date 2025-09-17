@@ -1,78 +1,85 @@
-import User, { normalizeKey } from '../models/User.js';
+import UserBase, { AdminUser, StaffUser, RegularUser } from '../models/User.js';
+import { normalizeKey } from '../models/User.base.js';
 
-/** GET /usuarios (lista) */
-export const listarUsuarios = async (_req, res, next) => {
+/** util: seleccionar solo campos permitidos */
+function pick(obj, keys) {
+  const out = {};
+  for (const k of keys) if (k in obj) out[k] = obj[k];
+  return out;
+}
+
+// whitelists
+const SELF_FIELDS = ['nombre', 'edad', 'password', 'telefono', 'direccion'];
+const ADMIN_EDIT_FIELDS = ['nombre', 'edad', 'role', 'permisos', 'adminNotes', 'area', 'turno', 'supervisor', 'telefono', 'direccion'];
+
+export const me = async (req, res, next) => {
   try {
-    const usuarios = await User.find().select('-password').lean();
-    res.json(usuarios);
-  } catch (e) { next(e); }
-};
-
-/** GET /usuarios/me (perfil propio) */
-export const miPerfil = async (req, res, next) => {
-  try {
-    const me = await User.findById(req.user.id).select('-password').lean();
-    if (!me) return res.status(404).json({ error: 'No encontrado' });
-    res.json(me);
-  } catch (e) { next(e); }
-};
-
-/** PATCH /usuarios/me (actualiza solo su perfil) */
-export const actualizarMiPerfil = async (req, res, next) => {
-  try {
-    const { nombre, edad, password } = req.body;
-    const update = {};
-    if (nombre) update.nombre = nombre;
-    if (edad !== undefined) update.edad = edad;
-    if (password) update.password = password; // se hashea en pre('save')
-
-    const user = await User.findById(req.user.id);
+    const user = await UserBase.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'No encontrado' });
-    Object.assign(user, update);
-    await user.save();
-
-    const limpio = user.toObject();
-    delete limpio.password;
-    res.json(limpio);
+    res.json(user); // toJSON sanitiza
   } catch (e) { next(e); }
 };
 
-/** GET /usuarios/by-name/:nombre (ignora tildes/caso) */
-export const getUsuarioPorNombre = async (req, res, next) => {
+export const patchMe = async (req, res, next) => {
+  try {
+    const fields = pick(req.body, SELF_FIELDS);
+    const user = await UserBase.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ error: 'No encontrado' });
+
+    Object.assign(user, fields);
+    await user.save();
+    res.json(user);
+  } catch (e) { next(e); }
+};
+
+export const list = async (_req, res, next) => {
+  try {
+    const users = await UserBase.find().select('-password -__v').lean();
+    res.json(users);
+  } catch (e) { next(e); }
+};
+
+export const getByName = async (req, res, next) => {
   try {
     const key = normalizeKey(req.params.nombre || '');
-    const usuario = await User.findOne({ nombreKey: key }).select('-password').lean();
-    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
-    res.json(usuario);
-  } catch (e) { next(e); }
-};
-
-/** Admin: PUT /usuarios/:id (actualiza cualquier usuario) */
-export const adminActualizarUsuario = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { nombre, edad, role } = req.body;
-    const user = await User.findById(id);
+    const user = await UserBase.findOne({ nombreKey: key });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-    if (nombre) user.nombre = nombre;
-    if (edad !== undefined) user.edad = edad;
-    if (role) user.role = role;
-
-    await user.save();
-    const limpio = user.toObject();
-    delete limpio.password;
-    res.json(limpio);
+    res.json(user);
   } catch (e) { next(e); }
 };
 
-/** Admin: DELETE /usuarios/:id */
-export const adminEliminarUsuario = async (req, res, next) => {
+export const adminUpdate = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const eliminado = await User.findByIdAndDelete(id).lean();
+    const fields = pick(req.body, ADMIN_EDIT_FIELDS);
+
+    let user = await UserBase.findById(id);
+    if (!user) return res.status(404).json({ error: 'No encontrado' });
+
+    // si cambia el role, migrar al discriminator correcto
+    if (fields.role && fields.role !== user.role) {
+      const data = { ...user.toObject(), ...fields, role: fields.role };
+      await user.deleteOne();
+
+      user = fields.role === 'admin'
+        ? await AdminUser.create(data)
+        : fields.role === 'staff'
+        ? await StaffUser.create(data)
+        : await RegularUser.create(data);
+
+      return res.json(user);
+    }
+
+    Object.assign(user, fields);
+    await user.save();
+    res.json(user);
+  } catch (e) { next(e); }
+};
+
+export const adminDelete = async (req, res, next) => {
+  try {
+    const eliminado = await UserBase.findByIdAndDelete(req.params.id);
     if (!eliminado) return res.status(404).json({ error: 'Usuario no existe' });
-    delete eliminado?.password;
     res.json({ mensaje: 'Usuario eliminado', usuario: eliminado });
   } catch (e) { next(e); }
 };

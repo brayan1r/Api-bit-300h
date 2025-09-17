@@ -1,26 +1,26 @@
 import { Router } from 'express';
-import {
-  listarUsuarios,
-  miPerfil,
-  actualizarMiPerfil,
-  getUsuarioPorNombre,
-  adminActualizarUsuario,
-  adminEliminarUsuario
-} from '../controllers/user.controller.js';
 import { requireAuth, requireRole } from '../middlewares/auth.js';
+import {
+  me,
+  patchMe,
+  list,
+  getByName,
+  adminUpdate,
+  adminDelete,
+} from '../controllers/user.controller.js';
 
 const router = Router();
 
-// Propias
-router.get('/me', requireAuth, miPerfil);
-router.patch('/me', requireAuth, actualizarMiPerfil);
+// Propias del usuario
+router.get('/me', requireAuth, me);
+router.patch('/me', requireAuth, patchMe);
 
-// Búsqueda por nombre (no requiere auth si lo expones públicamente)
-router.get('/by-name/:nombre', getUsuarioPorNombre);
+// Búsqueda por nombre (sin tildes/caso)
+router.get('/by-name/:nombre', getByName);
 
-// Admin
-router.get('/', requireAuth, requireRole('admin', 'staff'), listarUsuarios);
-router.put('/:id', requireAuth, requireRole('admin', 'staff'), adminActualizarUsuario);
-router.delete('/:id', requireAuth, requireRole('admin', 'staff'), adminEliminarUsuario);
+// Admin/staff
+router.get('/', requireAuth, requireRole('admin', 'staff'), list);
+router.put('/:id', requireAuth, requireRole('admin', 'staff'), adminUpdate);
+router.delete('/:id', requireAuth, requireRole('admin', 'staff'), adminDelete);
 
-export default router
+export default router;
