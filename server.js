@@ -5,7 +5,7 @@ import userRoutes from './routes/userRoutes.js'
 import productRoutes from './routes/productRoutes.js';
 import mongoose from "mongoose";
 
-mongoose.connect("mongodb://localhost:27017/Tienda")
+mongoose.connect("mongodb://localhost:27017/Ejemplo1")
   .then(() => console.log("Conectado a MongoDB"))
   .catch(err => console.error("Error de conexión", err));
 
