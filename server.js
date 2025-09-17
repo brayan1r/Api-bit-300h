@@ -1,28 +1,28 @@
-//1. Importar la libreria de express
-// const express = require('express');
-import express from 'express';
-import userRoutes from './routes/userRoutes.js'
-import productRoutes from './routes/productRoutes.js';
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import app from './app.js';
 
+<<<<<<< HEAD
 mongoose.connect("mongodb://localhost:27017/Ejemplo1")
   .then(() => console.log("Conectado a MongoDB"))
   .catch(err => console.error("Error de conexión", err));
+=======
+const { MONGODB_URI, PORT = 3000 } = process.env;
+>>>>>>> d34ca204bab42a5e0a9d3582bf61443db5b590db
 
-//2. Crear una instancia de express
-const app = express();
+async function main() {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log('Mongo conectado');
+    const server = app.listen(PORT, () => console.log(`API http://localhost:${PORT}`));
 
-//3. Definir el puerto en el que escuchara el servidor
-const PORT = 3000;
+    process.on('SIGINT', async () => {
+      await mongoose.connection.close();
+      server.close(() => process.exit(0));
+    });
+  } catch (err) {
+    console.error('Error de inicio:', err.message);
+    process.exit(1);
+  }
+}
 
-//4. Definir el middleware para parsear el body de las peticiones
-app.use(express.json());
-
-app.use('/user', userRoutes);
-app.use('/product', productRoutes);
-
-
-//6. Iniciar el servidor
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
-})
+main();

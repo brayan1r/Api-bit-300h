@@ -1,27 +1,28 @@
-import mongoose from "mongoose";
-import bcript from "bcrypt"; 
-const { Schema } = mongoose;
- 
-const userSchema = new Schema({
-  nombre: { type: String, required: true, trim: true },   // ← aquí
-  correo:  { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:{type:String, required:true,minLength:8},
-  rol:{type:String, enum: ["admin","staff","user"],default:"user"},
-  edad:    { type: Number, min: 0 }
-}, { timestamps: true });
+import mongoose from 'mongoose';
+import baseSchema from './User.base.js';
 
-Schema.index({email:1},{unique:true});
-Schema.pre("save",async function (next){
-  if (this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password,salt) //referenciar atributos de una clase. por Ej: 
-  next();
-  });
-  userSchema.method.comparePassword = function(plain){
-    return bcrypt.compare(plain, this.password);
+const UserBase = mongoose.model('User', baseSchema, 'users'); // colección 'users'
 
-  }
-const User = mongoose.model('User', userSchema, 'Usuarios');
-// (nombreDelModelo, esquema, nombreDeColeccionOpcional)
- 
-export default User;
+// ===== Admin extra fields =====
+const adminSchema = new mongoose.Schema({
+  permisos:   [{ type: String }],                 // ej. ['manage_users', 'manage_products']
+  adminNotes: { type: String },
+});
+export const AdminUser = UserBase.discriminator('admin', adminSchema);
+
+// ===== Staff extra fields =====
+const staffSchema = new mongoose.Schema({
+  area:       { type: String, required: true },   // ej. 'ventas', 'logistica'
+  turno:      { type: String, enum: ['manana', 'tarde', 'noche'] },
+  supervisor: { type: String },
+});
+export const StaffUser = UserBase.discriminator('staff', staffSchema);
+
+// ===== Regular user extra fields =====
+const customerSchema = new mongoose.Schema({
+  telefono:   { type: String },
+  direccion:  { type: String },
+});
+export const RegularUser = UserBase.discriminator('user', customerSchema);
+
+export default UserBase;
